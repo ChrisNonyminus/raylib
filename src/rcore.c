@@ -302,8 +302,8 @@
 
 
 #if defined(PLATFORM_VITA)
-#undef __linux__
-    #include <SDL/SDL.h>
+    #include <psp2/kernel/processmgr.h>
+    #include <psp2/ctrl.h>
     #include <vitaGL.h>
 #endif
 
@@ -818,6 +818,9 @@ void InitWindow(int width, int height, const char *title)
 
     InitTimer();
     TRACELOG(LOG_INFO, "done ");
+
+    CORE.Input.Gamepad.ready[0] = true;
+    sprintf(CORE.Input.Gamepad.name[0], "PSVITA");
 
     
     if (!CORE.Window.ready) return;
@@ -3773,7 +3776,7 @@ const char *GetGamepadName(int gamepad)
     if (CORE.Input.Gamepad.ready[gamepad]) ioctl(CORE.Input.Gamepad.streamId[gamepad], JSIOCGNAME(64), &CORE.Input.Gamepad.name[gamepad]);
     return CORE.Input.Gamepad.name[gamepad];
 #endif
-#if defined(PLATFORM_WEB)
+#if defined(PLATFORM_WEB) || defined(PLATFORM_VITA)
     return CORE.Input.Gamepad.name[gamepad];
 #endif
     return NULL;
@@ -5238,7 +5241,11 @@ void SwapScreenBuffer(void)
     glfwSwapBuffers(CORE.Window.handle);
 #endif
 
-#if defined(PLATFORM_ANDROID) || defined(PLATFORM_RPI) || defined(PLATFORM_DRM) || defined(PLATFORM_VITA)
+#if defined(PLATFORM_VITA)
+    vglSwapBuffers(0);
+#endif
+
+#if defined(PLATFORM_ANDROID) || defined(PLATFORM_RPI) || defined(PLATFORM_DRM)
     eglSwapBuffers(CORE.Window.device, CORE.Window.surface);
 
 #if defined(PLATFORM_DRM)
@@ -5426,6 +5433,68 @@ void PollInputEvents(void)
     else glfwPollEvents();      // Poll input events: keyboard/mouse/window events (callbacks)
 #endif  // PLATFORM_DESKTOP
 
+#if defined(PLATFORM_VITA)
+    for (int k = 0; k < MAX_GAMEPAD_BUTTONS; k++) CORE.Input.Gamepad.previousButtonState[0][k] = CORE.Input.Gamepad.currentButtonState[0][k];
+    SceCtrlData ctrl;
+	/* to enable analog sampling */
+	sceCtrlSetSamplingMode(SCE_CTRL_MODE_ANALOG);
+    memset(CORE.Input.Gamepad.currentButtonState, 0, sizeof(CORE.Input.Gamepad.currentButtonState));
+    sceCtrlPeekBufferPositive(0, &ctrl, 1);
+    if (ctrl.buttons & SCE_CTRL_TRIANGLE) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_RIGHT_FACE_UP] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_RIGHT_FACE_UP;
+    }
+    if (ctrl.buttons & SCE_CTRL_CIRCLE) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_RIGHT_FACE_RIGHT] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_RIGHT_FACE_RIGHT;
+    }
+    if (ctrl.buttons & SCE_CTRL_CROSS) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_RIGHT_FACE_DOWN] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_RIGHT_FACE_DOWN;
+    }
+    if (ctrl.buttons & SCE_CTRL_SQUARE) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_RIGHT_FACE_LEFT] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_RIGHT_FACE_LEFT;
+    }
+    if (ctrl.buttons & SCE_CTRL_SELECT) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_MIDDLE_LEFT] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_MIDDLE_LEFT;
+    }
+    if (ctrl.buttons & SCE_CTRL_START) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_MIDDLE_RIGHT] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_MIDDLE_RIGHT;
+    }
+    if (ctrl.buttons & SCE_CTRL_L2) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_LEFT_TRIGGER_1] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_LEFT_TRIGGER_1;
+    }
+    if (ctrl.buttons & SCE_CTRL_R2) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_RIGHT_TRIGGER_1] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_RIGHT_TRIGGER_1;
+    }
+    if (ctrl.buttons & SCE_CTRL_UP) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_LEFT_FACE_UP] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_LEFT_FACE_UP;
+    }
+    if (ctrl.buttons & SCE_CTRL_RIGHT) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_LEFT_FACE_RIGHT] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_LEFT_FACE_RIGHT;
+    }
+    if (ctrl.buttons & SCE_CTRL_DOWN) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_LEFT_FACE_DOWN] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_LEFT_FACE_DOWN;
+    }
+    if (ctrl.buttons & SCE_CTRL_LEFT) {
+        CORE.Input.Gamepad.currentButtonState[0][GAMEPAD_BUTTON_LEFT_FACE_LEFT] = 1;
+        CORE.Input.Gamepad.lastButtonPressed = GAMEPAD_BUTTON_LEFT_FACE_LEFT;
+    }
+    CORE.Input.Gamepad.axisState[0][GAMEPAD_AXIS_LEFT_X] = ((float)ctrl.lx / 127.0f) - 1;
+    CORE.Input.Gamepad.axisState[0][GAMEPAD_AXIS_LEFT_Y] = (float)ctrl.ly / 127.0f - 1;
+    CORE.Input.Gamepad.axisState[0][GAMEPAD_AXIS_RIGHT_X] = (float)ctrl.rx / 127.0f - 1;
+    CORE.Input.Gamepad.axisState[0][GAMEPAD_AXIS_RIGHT_Y] = (float)ctrl.ry / 127.0f - 1;
+    CORE.Input.Gamepad.axisCount = 4;
+#endif
+
 #if defined(PLATFORM_WEB)
     CORE.Window.resizedLastFrame = false;
 #endif  // PLATFORM_WEB
@@ -5533,6 +5602,8 @@ void PollInputEvents(void)
     // NOTE: Mouse input events polling is done asynchronously in another pthread - EventThread()
     // NOTE: Gamepad (Joystick) input events polling is done asynchonously in another pthread - GamepadThread()
 #endif
+
+
 }
 
 // Scan all files and directories in a base path
