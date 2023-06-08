@@ -11,6 +11,7 @@
 #    PLATFORM_RPI:      Raspberry Pi (deprecated - RPI OS Buster only)
 #    PLATFORM_DRM:      Linux native mode, including Raspberry Pi (RPI OS Bullseye)
 #    PLATFORM_WEB:      HTML5 (Chrome, Firefox)
+#    PLATFORM_VITA:     PlayStation Vita
 #
 #  Many thanks to Milan Nikolic (@gen2brain) for implementing Android platform pipeline.
 #  Many thanks to Emanuele Petriglia for his contribution on GNU/Linux pipeline.
@@ -78,8 +79,8 @@ RAYLIB_CONFIG_FLAGS  ?= NONE
 # NOTE: Some programs like tools could not require those modules
 RAYLIB_MODULE_AUDIO  ?= TRUE
 RAYLIB_MODULE_MODELS ?= TRUE
-RAYLIB_MODULE_RAYGUI ?= FALSE
-RAYLIB_MODULE_PHYSAC ?= FALSE
+RAYLIB_MODULE_RAYGUI ?= TRUE
+RAYLIB_MODULE_PHYSAC ?= TRUE
 
 # NOTE: Additional libraries have been moved to their own repos:
 # raygui: https://github.com/raysan5/raygui
@@ -89,6 +90,10 @@ RAYLIB_MODULE_PHYSAC_PATH ?= $(RAYLIB_SRC_PATH)/../../physac/src
 
 # Use external GLFW library instead of rglfw module
 USE_EXTERNAL_GLFW     ?= FALSE
+
+ifeq ($(PLATFORM),PLATFORM_VITA)
+USE_EXTERNAL_GLFW = TRUE
+endif
 
 # Use Wayland display server protocol on Linux desktop (by default it uses X11 windowing system)
 # NOTE: This variable is only used for PLATFORM_OS: LINUX
@@ -143,6 +148,10 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
             PLATFORM_SHELL = sh
         endif
     endif
+endif
+ifeq ($(PLATFORM),PLATFORM_VITA)
+    PLATFORM_OS = VITA
+    PLATFORM_SHELL = sh
 endif
 ifeq ($(PLATFORM),PLATFORM_RPI)
     UNAMEOS = $(shell uname)
@@ -252,6 +261,11 @@ ifeq ($(PLATFORM),PLATFORM_ANDROID)
     GRAPHICS = GRAPHICS_API_OPENGL_ES2
 endif
 
+ifeq ($(PLATFORM),PLATFORM_VITA)
+    GRAPHICS = GRAPHICS_API_OPENGL_11      # Uncomment to use OpenGL 1.1
+    #GRAPHICS = GRAPHICS_API_OPENGL_ES2  # Uncomment to use OpenGL ES 2.0 (ANGLE)
+endif
+
 # Define default C compiler and archiver to pack library: CC, AR
 #------------------------------------------------------------------------------------------------
 CC = gcc
@@ -305,6 +319,10 @@ ifeq ($(PLATFORM),PLATFORM_ANDROID)
     endif
     # It seems from Android NDK r22 onwards we need to use llvm-ar
     AR = $(ANDROID_TOOLCHAIN)/bin/llvm-ar
+endif
+ifeq ($(PLATFORM),PLATFORM_VITA)
+    CC = arm-vita-eabi-gcc
+    AR = arm-vita-eabi-ar
 endif
 
 # Define compiler flags: CFLAGS
@@ -444,6 +462,11 @@ endif
 # NOTE: Several external required libraries (stb and others)
 #------------------------------------------------------------------------------------------------
 INCLUDE_PATHS = -I. -Iexternal/glfw/include -Iexternal/glfw/deps/mingw
+
+ifeq ($(PLATFORM),PLATFORM_VITA)
+    CFLAGS = -Wl,-q -Wall -Wno-incompatible-pointer-types -Wno-pointer-sign -O3 -nostartfiles -DVITA -D$(PLATFORM) -D$(GRAPHICS)
+    INCLUDE_PATHS = -I.
+endif
 
 # Define additional directories containing required header files
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
@@ -756,6 +779,11 @@ android_native_app_glue.o : $(NATIVE_APP_GLUE)/android_native_app_glue.c
 
 # RAYLIB_INSTALL_PATH should be the desired full path to libraylib. No relative paths.
 DESTDIR ?= /usr/local
+
+ifeq ($(PLATFORM_OS),VITA)
+DESTDIR = /usr/local/vitasdk/arm-vita-eabi
+endif
+
 RAYLIB_INSTALL_PATH ?= $(DESTDIR)/lib
 # RAYLIB_H_INSTALL_PATH locates the installed raylib header and associated source files.
 RAYLIB_H_INSTALL_PATH ?= $(DESTDIR)/include
@@ -786,7 +814,18 @@ ifeq ($(ROOT),root)
 		cp --update rlgl.h $(RAYLIB_H_INSTALL_PATH)/rlgl.h
 		@echo "raylib development files installed/updated!"
     else
-		@echo "This function currently works on GNU/Linux systems. Add yours today (^;"
+        ifeq ($(PLATFORM_OS),VITA)
+			mkdir -p $(RAYLIB_INSTALL_PATH)
+			mkdir -p $(RAYLIB_H_INSTALL_PATH)
+			cp --update --verbose $(RAYLIB_RELEASE_PATH)/lib$(RAYLIB_LIB_NAME).a $(RAYLIB_INSTALL_PATH)/lib$(RAYLIB_LIB_NAME).a
+			cp --update raylib.h $(RAYLIB_H_INSTALL_PATH)/raylib.h
+			cp --update raymath.h $(RAYLIB_H_INSTALL_PATH)/raymath.h
+			cp --update rlgl.h $(RAYLIB_H_INSTALL_PATH)/rlgl.h
+			cp --update $(RAYLIB_MODULE_PHYSAC_PATH)/physac.h $(RAYLIB_H_INSTALL_PATH)/physac.h
+			@echo "raylib development files installed/updated!"
+        else
+            @echo "This function currently works on GNU/Linux systems. Add yours today (^;"
+        endif
     endif
 else
 	@echo "Error: Root permissions needed for installation. Try sudo make install"
@@ -812,8 +851,17 @@ ifeq ($(ROOT),root)
 		rm --force --interactive --verbose $(RAYLIB_H_INSTALL_PATH)/raymath.h
 		rm --force --interactive --verbose $(RAYLIB_H_INSTALL_PATH)/rlgl.h
 		@echo "raylib development files removed!"
+    else
+        ifeq ($(PLATFORM_OS),VITA)
+			rm --force --interactive --verbose $(RAYLIB_H_INSTALL_PATH)/raylib.h
+			rm --force --interactive --verbose $(RAYLIB_H_INSTALL_PATH)/raymath.h
+			rm --force --interactive --verbose $(RAYLIB_H_INSTALL_PATH)/rlgl.h
+			rm --force --interactive --verbose $(RAYLIB_H_INSTALL_PATH)/physac.h
+			rm --force --interactive --verbose $(RAYLIB_H_INSTALL_PATH)/rayspine.h
+			@echo "raylib development files removed!"   
         else
-		@echo "This function currently works on GNU/Linux systems. Add yours today (^;"
+			@echo "This function currently works on GNU/Linux systems. Add yours today (^;"
+        endif
     endif
 else
 	@echo "Error: Root permissions needed for uninstallation. Try sudo make uninstall"

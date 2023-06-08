@@ -784,7 +784,11 @@ RLAPI void rlLoadDrawQuad(void);     // Load and draw a quad
             #define WINGDIAPI __declspec(dllimport)
         #endif
 
+#if !defined(PLATFORM_VITA)
         #include <GL/gl.h>              // OpenGL 1.1 library
+#else
+        #include <vitaGL.h>
+#endif
     #endif
 #endif
 
@@ -1813,14 +1817,16 @@ void rlSetLineWidth(float width) { glLineWidth(width); }
 float rlGetLineWidth(void)
 {
     float width = 0;
+#if !defined(PLATFORM_VITA)
     glGetFloatv(GL_LINE_WIDTH, &width);
+#endif
     return width;
 }
 
 // Enable line aliasing
 void rlEnableSmoothLines(void)
 {
-#if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_11)
+#if defined(GRAPHICS_API_OPENGL_33) || (defined(GRAPHICS_API_OPENGL_11) && !defined(PLATFORM_VITA))
     glEnable(GL_LINE_SMOOTH);
 #endif
 }
@@ -1828,7 +1834,7 @@ void rlEnableSmoothLines(void)
 // Disable line aliasing
 void rlDisableSmoothLines(void)
 {
-#if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_11)
+#if defined(GRAPHICS_API_OPENGL_33) || (defined(GRAPHICS_API_OPENGL_11) && !defined(PLATFORM_VITA))
     glDisable(GL_LINE_SMOOTH);
 #endif
 }
@@ -2111,7 +2117,7 @@ void rlglInit(int width, int height)
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);                 // Seamless cubemaps (not supported on OpenGL ES 2.0)
 #endif
 
-#if defined(GRAPHICS_API_OPENGL_11)
+#if defined(GRAPHICS_API_OPENGL_11) && !defined(PLATFORM_VITA)
     // Init state: Color hints (deprecated in OpenGL 3.0+)
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);      // Improve quality of color and texture coordinate interpolation
     glShadeModel(GL_SMOOTH);                                // Smooth shading between vertex (vertex colors interpolation)
@@ -3291,7 +3297,7 @@ void *rlReadTexturePixels(unsigned int id, int width, int height, int format)
 {
     void *pixels = NULL;
 
-#if defined(GRAPHICS_API_OPENGL_11) || defined(GRAPHICS_API_OPENGL_33)
+#if (defined(GRAPHICS_API_OPENGL_11) && !defined(PLATFORM_VITA)) || defined(GRAPHICS_API_OPENGL_33)
     glBindTexture(GL_TEXTURE_2D, id);
 
     // NOTE: Using texture id, we can retrieve some texture info (but not on OpenGL ES 2.0)
@@ -3321,7 +3327,7 @@ void *rlReadTexturePixels(unsigned int id, int width, int height, int format)
     glBindTexture(GL_TEXTURE_2D, 0);
 #endif
 
-#if defined(GRAPHICS_API_OPENGL_ES2)
+#if defined(GRAPHICS_API_OPENGL_ES2) || defined(PLATFORM_VITA)
     // glGetTexImage() is not available on OpenGL ES 2.0
     // Texture width and height are required on OpenGL ES 2.0. There is no way to get it from texture id.
     // Two possible Options:

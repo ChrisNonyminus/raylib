@@ -43,6 +43,7 @@
 //------------------------------------------------------------------------------------
 // Camera module is included (rcamera.h) and multiple predefined cameras are available: free, 1st/3rd person, orbital
 #define SUPPORT_CAMERA_SYSTEM           1
+#if !defined(__vita__)
 // Gestures module is included (rgestures.h) to support gestures detection: tap, hold, swipe, drag
 #define SUPPORT_GESTURES_SYSTEM         1
 // Mouse gestures are directly mapped like touches and processed by gestures system
@@ -52,6 +53,15 @@
 // Setting a higher resolution can improve the accuracy of time-out intervals in wait functions.
 // However, it can also reduce overall system performance, because the thread scheduler switches tasks more often.
 #define SUPPORT_WINMM_HIGHRES_TIMER     1
+#else
+#define SUPPORT_GESTURES_SYSTEM         0
+#define SUPPORT_MOUSE_GESTURES 0
+#define SUPPORT_SSH_KEYBOARD_RPI        0
+#define SUPPORT_WINMM_HIGHRES_TIMER     0
+
+#define SUPPORT_BUSY_WAIT_LOOP          1
+#endif
+
 // Use busy wait loop for timing sync, if not defined, a high-resolution timer is set up and used
 //#define SUPPORT_BUSY_WAIT_LOOP          1
 // Use a partial-busy wait loop, in this case frame sleeps for most of the time, but then runs a busy loop at the end for accuracy
@@ -96,7 +106,7 @@
 //#define RLGL_ENABLE_OPENGL_DEBUG_CONTEXT       1
 
 // Show OpenGL extensions and capabilities detailed logs on init
-//#define RLGL_SHOW_GL_DETAILS_INFO              1
+#define RLGL_SHOW_GL_DETAILS_INFO              1
 
 //#define RL_DEFAULT_BATCH_BUFFER_ELEMENTS    4096    // Default internal render batch elements limits
 #define RL_DEFAULT_BATCH_BUFFERS               1      // Default number of batch buffers (multi-buffering)
