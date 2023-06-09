@@ -171,6 +171,9 @@ typedef struct tagBITMAPINFOHEADER {
 // Threading model: Default: [0] COINIT_MULTITHREADED: COM calls objects on any thread (free threading)
 #define MA_COINIT_VALUE  2              // [2] COINIT_APARTMENTTHREADED: Each object has its own thread (apartment model)
 
+#if defined(PLATFORM_VITA)
+#define MA_NO_RUNTIME_LINKING
+#endif
 #define MINIAUDIO_IMPLEMENTATION
 //#define MA_DEBUG_OUTPUT
 #include "external/miniaudio.h"         // Audio device initialization and management
