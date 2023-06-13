@@ -297,6 +297,8 @@ typedef struct tagBITMAPINFOHEADER {
 
 #ifdef PLATFORM_VITA
 #define MA_SUPPORT_SDL
+#else
+#define MA_NO_SDL
 #endif
 
 /*
